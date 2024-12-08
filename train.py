@@ -27,20 +27,45 @@ def create_data_yaml():
         yaml.dump(data, f)
     return yaml_path
 
+def get_training_device():
+    """
+    获取训练设备，并设置相应的显存限制
+    """
+    if torch.cuda.is_available():
+        device = torch.device('cuda')
+        # 设置显存限制，预留部分显存给系统
+        torch.cuda.set_per_process_memory_fraction(0.9, 0)  # 使用90%显存用于训练
+        return device
+    elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+        return torch.device('mps')
+    else:
+        return torch.device('cpu')
+
 def train():
     try:
         # 创建数据配置文件
         yaml_path = create_data_yaml()
         
+        # 获取最优训练设备
+        device = get_training_device()
+        
+        # 更新训练参数
+        train_params = config.TRAIN_PARAMS.copy()
+        train_params['device'] = device
+        
+        # 如果使用CUDA，启用混合精度训练
+        if device.type == 'cuda':
+            train_params['amp'] = True  # 自动混合精度
+        
         # 构建训练命令
         cmd = [
             'python3', '-m', 'yolov5.train',
-            '--img', str(config.TRAIN_PARAMS['imgsz']),
-            '--batch', str(config.TRAIN_PARAMS['batch']),
-            '--epochs', str(config.TRAIN_PARAMS['epochs']),
+            '--img', str(train_params['imgsz']),
+            '--batch', str(train_params['batch']),
+            '--epochs', str(train_params['epochs']),
             '--data', yaml_path,
             '--weights', 'yolov5s.pt',  # 使用预训练模型
-            '--device', str(config.TRAIN_PARAMS['device']),
+            '--device', str(train_params['device']),
             '--project', 'runs/train',
             '--name', 'exp',
             '--cache'  # 缓存图像以加快训练

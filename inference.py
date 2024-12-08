@@ -4,20 +4,42 @@ import numpy as np
 from pathlib import Path
 import config
 
+def get_optimal_device():
+    """
+    按照优先级选择最优运行设备：CUDA > MPS > CPU
+    """
+    if torch.cuda.is_available():
+        # 如果有CUDA，设置显存限制
+        torch.cuda.set_per_process_memory_fraction(0.9, 0)  # 限制显存使用为最大显存的90%
+        return torch.device('cuda')
+    elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+        return torch.device('mps')
+    else:
+        return torch.device('cpu')
+
 class RobotMasterDetector:
     def __init__(self):
-        # 加载模型
-        self.model = torch.hub.load('ultralytics/yolov5', 'custom', 
-                                  path=config.MODEL_PATH, force_reload=True)
+        # 选择最优设备
+        self.device = get_optimal_device()
         
-        # 设置推理参数
-        self.model.conf = 0.25  # 置信度阈值
-        self.model.iou = 0.45   # NMS IOU阈值
-        self.model.classes = None  # 检测所有类别
+        # 加载模型时添加显存优化参数
+        self.model = torch.hub.load('ultralytics/yolov5', 'custom',
+                                  path=config.MODEL_PATH,
+                                  force_reload=True,
+                                  device=self.device)
         
-        # 如果有GPU则使用GPU
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.model.to(self.device)
+        # 优化推理参数
+        self.model.conf = 0.25
+        self.model.iou = 0.45
+        self.model.classes = None
+        self.model.max_det = 100  # 限制最大检测数量
+        
+        # 设置推理时的batch size
+        self.model.batch_size = 1
+        
+        # 启用半精度推理以节省显存
+        if self.device.type == 'cuda':
+            self.model.half()  # 使用FP16
     
     def detect(self, image):
         """
@@ -27,8 +49,13 @@ class RobotMasterDetector:
         Returns:
             detections: 列表，每个元素为 (数字, 颜色, 中心坐标x, 中心坐标y, 置信度)
         """
+        # 根据设备类型处理输入
+        if self.device.type == 'cuda':
+            image = torch.from_numpy(image).to(self.device).half()  # 转换为FP16
+        
         # 推理
-        results = self.model(image)
+        with torch.no_grad():  # 禁用梯度计算
+            results = self.model(image)
         
         # 解析结果
         detections = []

@@ -21,8 +21,10 @@ TRAIN_PARAMS = {
     'epochs': 150,
     'imgsz': 640,
     'batch': 36,
-    'device': 0,  # 使用GPU，如无GPU可设置为'cpu'
-    'verbose': True
+    'device': None,
+    'verbose': True,
+    'workers': 8,
+    'cache': False
 }
 
 # 早停机制参数
