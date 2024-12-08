@@ -1,0 +1,25 @@
+names:
+- 0_red
+- 1_red
+- 2_red
+- 3_red
+- 4_red
+- 5_red
+- 6_red
+- 7_red
+- 8_red
+- 9_red
+- 0_blue
+- 1_blue
+- 2_blue
+- 3_blue
+- 4_blue
+- 5_blue
+- 6_blue
+- 7_blue
+- 8_blue
+- 9_blue
+nc: 20
+path: /home/gloridust/Documents/Num_Color_Object_Detection_YOLOv5/dataset
+train: /home/gloridust/Documents/Num_Color_Object_Detection_YOLOv5/data/images/train
+val: /home/gloridust/Documents/Num_Color_Object_Detection_YOLOv5/data/images/val
