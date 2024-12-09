@@ -114,6 +114,11 @@ def main():
     # 打开摄像头（根据实际情况修改摄像头索引）
     cap = cv2.VideoCapture(0)
     
+    # 初始化FPS计算相关变量
+    fps = 0
+    frame_count = 0
+    start_time = cv2.getTickCount()
+    
     while True:
         ret, frame = cap.read()
         if not ret:
@@ -121,6 +126,20 @@ def main():
         
         # 处理帧
         processed_frame, detections = detector.process_frame(frame)
+        
+        # 计算FPS
+        frame_count += 1
+        if frame_count >= 30:  # 每30帧更新一次FPS
+            current_time = cv2.getTickCount()
+            elapsed_time = (current_time - start_time) / cv2.getTickFrequency()
+            fps = frame_count / elapsed_time
+            frame_count = 0
+            start_time = current_time
+        
+        # 在画面上显示FPS
+        cv2.putText(processed_frame, f"FPS: {fps:.1f}", 
+                   (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 
+                   1, (0, 255, 0), 2)
         
         # 显示结果
         cv2.imshow('RobotMaster Detection', processed_frame)
